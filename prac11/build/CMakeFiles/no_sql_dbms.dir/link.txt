@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/no_sql_dbms.dir/src/main.cpp.o CMakeFiles/no_sql_dbms.dir/src/collection.cpp.o CMakeFiles/no_sql_dbms.dir/src/db.cpp.o -o no_sql_dbms

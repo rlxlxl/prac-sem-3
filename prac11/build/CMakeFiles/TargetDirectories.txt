@@ -1,0 +1,3 @@
+/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac1/build/CMakeFiles/no_sql_dbms.dir
+/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac1/build/CMakeFiles/edit_cache.dir
+/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac1/build/CMakeFiles/rebuild_cache.dir
