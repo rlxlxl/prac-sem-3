@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I"/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac1/include" -I"/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac1/third_party"
+CXX_INCLUDES = -I"/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac11/include" -I"/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/prac11/third_party"
 
 CXX_FLAGSarm64 = -std=gnu++17 -arch arm64
 

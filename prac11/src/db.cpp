@@ -1,18 +1,18 @@
 #include "db.h"
 #include <filesystem>
 #include <iostream>
+using namespace std;
+namespace fs = filesystem;
 
-namespace fs = std::filesystem;
-
-Database::Database(const std::string& dir)
-    : dir_path(dir)
+Database::Database(const string& directoryPath)
+    : dirPath_(directoryPath)
 {
-    if (!fs::exists(dir_path)) {
-        fs::create_directories(dir_path);
+    if (!fs::exists(dirPath_)) {
+        fs::create_directories(dirPath_);
     }
 }
 
-std::shared_ptr<Collection> Database::open_collection(const std::string& name) {
-    std::string path = dir_path + "/" + name + ".json";
-    return std::make_shared<Collection>(path);
+shared_ptr<Collection> Database::openCollection(const string& name) {
+    string path = dirPath_ + "/" + name + ".json";
+    return make_shared<Collection>(path);
 }

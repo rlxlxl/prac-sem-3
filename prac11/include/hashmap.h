@@ -13,66 +13,79 @@ private:
         bool occupied = false;
     };
 
-    std::vector<Node> data;
-    size_t count = 0;
-    double load_factor;
+    std::vector<Node> data_;
+    size_t count_ = 0;
+    double loadFactor_;
 
-    size_t hash(const K& key) const {
-        return std::hash<K>{}(key) % data.size();
+    // Вычисление индекса хеш-значения
+    size_t hashKey(const K& key) const {
+        return std::hash<K>{}(key) % data_.size();
     }
 
 public:
-    HashMap(size_t initial_size = 32, double lf = 0.75)
-        : data(initial_size), load_factor(lf) {}
+    HashMap(size_t initialSize = 32, double loadFactor = 0.75)
+        : data_(initialSize), loadFactor_(loadFactor) {}
 
+    // Вставка или обновление элемента
     void put(const K& key, const V& value) {
-        size_t idx = hash(key);
+        size_t idx = hashKey(key);
 
-        while (data[idx].occupied && data[idx].key != key) {
-            idx = (idx + 1) % data.size();
+        while (data_[idx].occupied && data_[idx].key != key) {
+            idx = (idx + 1) % data_.size();
         }
 
-        if (!data[idx].occupied) {
-            data[idx].occupied = true;
-            data[idx].key = key;
-            count++;
+        if (!data_[idx].occupied) {
+            data_[idx].occupied = true;
+            data_[idx].key = key;
+            count_++;
         }
 
-        data[idx].value = value;
+        data_[idx].value = value;
     }
 
+    // Получение элемента
     std::optional<V> get(const K& key) const {
-        size_t idx = hash(key);
+        size_t idx = hashKey(key);
 
-        while (data[idx].occupied) {
-            if (data[idx].key == key)
-                return data[idx].value;
+        while (data_[idx].occupied) {
+            if (data_[idx].key == key)
+                return data_[idx].value;
 
-            idx = (idx + 1) % data.size();
+            idx = (idx + 1) % data_.size();
         }
+
         return std::nullopt;
     }
 
+    // Удаление элемента
     void remove(const K& key) {
-        size_t idx = hash(key);
+        size_t idx = hashKey(key);
 
-        while (data[idx].occupied) {
-            if (data[idx].key == key) {
-                data[idx].occupied = false;
+        while (data_[idx].occupied) {
+            if (data_[idx].key == key) {
+                data_[idx].occupied = false;
                 return;
             }
-            idx = (idx + 1) % data.size();
+            idx = (idx + 1) % data_.size();
         }
     }
 
-    std::vector<std::pair<K,V>> items() const {
-        std::vector<std::pair<K,V>> out;
-        out.reserve(count);
+    // Получение всех элементов в виде вектора пар
+    std::vector<std::pair<K, V>> items() const {
+        std::vector<std::pair<K, V>> out;
+        out.reserve(count_);
 
-        for (auto &n : data)
-            if (n.occupied)
-                out.emplace_back(n.key, n.value);
+        for (const auto& node : data_) {
+            if (node.occupied) {
+                out.emplace_back(node.key, node.value);
+            }
+        }
 
         return out;
+    }
+
+    // Дополнительно можно добавить метод size()
+    size_t size() const {
+        return count_;
     }
 };

@@ -4,93 +4,119 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-
+using namespace std;
 using json = nlohmann::json;
 
-static std::string read_json_arg_from_argv(int argc, char** argv, int idx) {
-    // argv[idx] can be something like "base insert '{\"name\":\"Alice\"}'" in problem description,
-    // but we expect CLI usage: ./no_sql_dbms dbname insert '{"name":"Alice"}'
-    if (idx >= argc) return "";
-    return std::string(argv[idx]);
+static string readJsonArgFromArgv(int argc, char** argv, int index) {
+    if (index >= argc) return "";
+    return string(argv[index]);
 }
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::cout << "Usage:\n"
+        cout << "Usage:\n"
                   << "  " << argv[0] << " <db_dir> insert '<json_doc>'\n"
                   << "  " << argv[0] << " <db_dir> find '<json_query>'\n"
                   << "  " << argv[0] << " <db_dir> delete '<json_query>'\n"
-                  << "  " << argv[0] << " <db_dir> create_index <field>\n";
+                  << "  " << argv[0] << " <db_dir> createIndex <field>\n";
         return 1;
     }
 
-    std::string dbdir = argv[1];
-    std::string cmd = argv[2];
+    string dbDir = argv[1];
+    string command = argv[2];
 
-    Database db(dbdir);
-    auto coll = db.open_collection("collection");
+    Database db(dbDir);
+    auto collection = db.openCollection("collection");
 
     try {
-        if (cmd == "insert") {
-            if (argc < 4) { std::cout << "Missing JSON document\n"; return 1; }
-            std::string jstr = argv[3];
-            // allow JSON passed across spaces by concatenating remaining args if first char is '{'
-            if (jstr.size() && jstr.front()=='{') {
-                // good
-            } else {
-                // try concat everything from 3
-                std::stringstream ss;
-                for (int i=3;i<argc;++i) {
-                    if (i>3) ss << " ";
+        if (command == "insert") {
+            if (argc < 4) { 
+                cout << "Missing JSON document\n"; 
+                return 1; 
+            }
+
+            string jsonString = argv[3];
+            if (jsonString.empty() || jsonString.front() != '{') {
+                stringstream ss;
+                for (int i = 3; i < argc; ++i) {
+                    if (i > 3) ss << " ";
                     ss << argv[i];
                 }
-                jstr = ss.str();
+                jsonString = ss.str();
             }
-            json doc = json::parse(jstr);
-            std::string id = coll->insert(doc);
-            if (!id.empty()) std::cout << "Document inserted successfully. _id=" << id << "\n";
-            else std::cout << "Insert failed\n";
+
+            json document = json::parse(jsonString);
+            string id = collection->insert(document);
+            if (!id.empty()) 
+                cout << "Document inserted successfully. _id=" << id << "\n";
+            else 
+                cout << "Insert failed\n";
+
             return 0;
-        } else if (cmd == "find") {
-            if (argc < 4) { std::cout << "Missing JSON query\n"; return 1; }
-            std::stringstream ss;
-            for (int i=3;i<argc;++i) {
-                if (i>3) ss << " ";
+
+        } else if (command == "find") {
+            if (argc < 4) { 
+                cout << "Missing JSON query\n"; 
+                return 1; 
+            }
+
+            stringstream ss;
+            for (int i = 3; i < argc; ++i) {
+                if (i > 3) ss << " ";
                 ss << argv[i];
             }
-            std::string q = ss.str();
-            json query = json::parse(q);
-            auto res = coll->find(query);
-            json out = json::array();
-            for (auto &d : res) out.push_back(d);
-            std::cout << out.dump(4) << "\n";
+
+            string queryString = ss.str();
+            json query = json::parse(queryString);
+            auto results = collection->find(query);
+
+            json output = json::array();
+            for (auto& doc : results) {
+                output.push_back(doc);
+            }
+
+            cout << output.dump(4) << "\n";
             return 0;
-        } else if (cmd == "delete") {
-            if (argc < 4) { std::cout << "Missing JSON query\n"; return 1; }
-            std::stringstream ss;
-            for (int i=3;i<argc;++i) {
-                if (i>3) ss << " ";
+
+        } else if (command == "delete") {
+            if (argc < 4) { 
+                cout << "Missing JSON query\n"; 
+                return 1; 
+            }
+
+            stringstream ss;
+            for (int i = 3; i < argc; ++i) {
+                if (i > 3) ss << " ";
                 ss << argv[i];
             }
-            std::string q = ss.str();
-            json query = json::parse(q);
-            int removed = coll->remove(query);
-            std::cout << "Removed " << removed << " documents\n";
+
+            string queryString = ss.str();
+            json query = json::parse(queryString);
+            int removedCount = collection->remove(query);
+
+            cout << "Removed " << removedCount << " document(s)\n";
             return 0;
-        } else if (cmd == "create_index") {
-            if (argc < 4) { std::cout << "Missing field name\n"; return 1; }
-            std::string field = argv[3];
-            coll->create_index(field);
+
+        } else if (command == "createIndex") {
+            if (argc < 4) { 
+                cout << "Missing field name\n"; 
+                return 1; 
+            }
+
+            string fieldName = argv[3];
+            collection->createIndex(fieldName);
             return 0;
+
         } else {
-            std::cout << "Unknown command: " << cmd << "\n";
+            cout << "Unknown command: " << command << "\n";
             return 1;
         }
-    } catch (const std::exception &ex) {
-        std::cout << "Error: " << ex.what() << "\n";
+
+    } catch (const exception& ex) {
+        cout << "Error: " << ex.what() << "\n";
         return 1;
     } catch (...) {
-        std::cout << "Unknown error\n";
+        cout << "Unknown error\n";
         return 1;
     }
 }

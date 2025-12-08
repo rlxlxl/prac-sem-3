@@ -3,14 +3,15 @@
 #include "json.hpp"
 #include <string>
 #include <memory>
-
+using namespace std;
 using json = nlohmann::json;
 
 class Database {
 public:
-    Database(const std::string& dir);
-    std::shared_ptr<Collection> open_collection(const std::string& name);
+    Database(const string& directoryPath);
+
+    shared_ptr<Collection> openCollection(const string& name);
 
 private:
-    std::string dir_path;
+    string dirPath_;  
 };
