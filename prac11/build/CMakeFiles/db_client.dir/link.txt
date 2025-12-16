@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/db_client.dir/src/client.cpp.o CMakeFiles/db_client.dir/src/collection.cpp.o CMakeFiles/db_client.dir/src/db.cpp.o -o db_client
