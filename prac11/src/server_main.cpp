@@ -17,7 +17,6 @@ int main(int argc, char** argv) {
     string dbDir = "build/my_database";
     int port = 8080;
     
-    // Парсинг аргументов командной строки
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
         
@@ -35,11 +34,9 @@ int main(int argc, char** argv) {
     DatabaseServer server(dbDir, port);
     g_server = &server;
     
-    // Устанавливаем обработчик сигналов для корректного завершения
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-    // Запускаем сервер
     server.start();
     
     return 0;

@@ -31,15 +31,12 @@ private:
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(port_);
         
-        // Преобразуем "localhost" в "127.0.0.1"
         string hostToConnect = host_;
         if (host_ == "localhost") {
             hostToConnect = "127.0.0.1";
         }
         
-        // Пытаемся распарсить как IP адрес
         if (inet_pton(AF_INET, hostToConnect.c_str(), &serverAddr.sin_addr) <= 0) {
-            // Если не IP, пытаемся разрешить через DNS
             struct hostent* he = gethostbyname(host_.c_str());
             if (he == nullptr) {
                 cerr << "Invalid address or hostname: " << host_ << "\n";
@@ -119,7 +116,6 @@ private:
         }
     }
     
-    // Конвертирует одинарные кавычки в двойные для JSON парсинга
     string convertSingleQuotesToDouble(const string& str) {
         string result = str;
         bool escaped = false;
@@ -135,7 +131,6 @@ private:
                 continue;
             }
             
-            // Заменяем одинарные кавычки на двойные
             if (result[i] == '\'') {
                 result[i] = '"';
             }
@@ -144,33 +139,27 @@ private:
         return result;
     }
     
-    // Парсинг команды вида: INSERT users{'name': 'Alice', 'age': 25}
     bool parseCommand(const string& line, string& operation, string& collection, json& data) {
         string trimmed = line;
-        // Убираем пробелы в начале и конце
         while (!trimmed.empty() && trimmed[0] == ' ') trimmed.erase(0, 1);
         while (!trimmed.empty() && trimmed.back() == ' ') trimmed.pop_back();
         
         if (trimmed.empty()) return false;
         
-        // Находим пробел после операции
         size_t spacePos = trimmed.find(' ');
         if (spacePos == string::npos) return false;
         
         operation = trimmed.substr(0, spacePos);
         string rest = trimmed.substr(spacePos + 1);
         
-        // Находим открывающую скобку для коллекции
         size_t bracePos = rest.find('{');
         if (bracePos == string::npos) return false;
         
         collection = rest.substr(0, bracePos);
-        // Убираем пробелы из имени коллекции
         while (!collection.empty() && collection.back() == ' ') collection.pop_back();
         
         string jsonStr = rest.substr(bracePos);
         
-        // Конвертируем одинарные кавычки в двойные для JSON
         jsonStr = convertSingleQuotesToDouble(jsonStr);
         
         try {
@@ -209,7 +198,6 @@ public:
             return false;
         }
         
-        // Преобразуем операцию в верхний регистр
         for (char& c : operation) {
             c = toupper(c);
         }
@@ -240,7 +228,6 @@ public:
             return false;
         }
         
-        // Выводим результат
         if (response.contains("status")) {
             string status = response["status"].get<string>();
             if (status == "error") {
@@ -271,7 +258,6 @@ public:
         
         string line;
         while (getline(cin, line)) {
-            // Убираем пробелы в начале и конце
             while (!line.empty() && line[0] == ' ') line.erase(0, 1);
             while (!line.empty() && line.back() == ' ') line.pop_back();
             
@@ -295,7 +281,6 @@ int main(int argc, char** argv) {
     int port = 8080;
     string database;
     
-    // Парсинг аргументов командной строки
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
         
