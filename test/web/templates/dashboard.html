@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд - SIEM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .widget {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 100%;
+    }
+    .widget-header {
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .widget-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+    .stat-card {
+        text-align: center;
+        padding: 20px;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+    .stat-label {
+        color: #666;
+        margin-top: 5px;
+    }
+    .refresh-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-chart-line"></i> Дашборд мониторинга</h1>
+    <div>
+        <span class="badge bg-success me-2" id="lastUpdate">
+            <i class="fas fa-circle"></i> Обновляется...
+        </span>
+        <button class="btn btn-primary" onclick="refreshAll()">
+            <i class="fas fa-sync-alt"></i> Обновить
+        </button>
+    </div>
+</div>
+
+<!-- Активные агенты -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-server"></i> Активные агенты</h3>
+            </div>
+            <div id="activeAgents" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="widget stat-card">
+            <div class="stat-value" id="totalEvents">-</div>
+            <div class="stat-label">Всего событий (24ч)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="widget stat-card">
+            <div class="stat-value" id="highSeverity">-</div>
+            <div class="stat-label">Высокая критичность</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="widget stat-card">
+            <div class="stat-value" id="activeHosts">-</div>
+            <div class="stat-label">Активных хостов</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="widget stat-card">
+            <div class="stat-value" id="activeUsers">-</div>
+            <div class="stat-label">Активных пользователей</div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-chart-pie"></i> События по типу</h3>
+            </div>
+            <canvas id="eventsByTypeChart"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-chart-bar"></i> События по критичности</h3>
+            </div>
+            <canvas id="eventsBySeverityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- График во времени -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-chart-line"></i> События во времени (последние 24 часа)</h3>
+            </div>
+            <canvas id="eventsTimelineChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Таблицы -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-users"></i> Топ пользователей</h3>
+            </div>
+            <div id="topUsers" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-cogs"></i> Топ процессов</h3>
+            </div>
+            <div id="topProcesses" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние входы -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-sign-in-alt"></i> Последние входы в систему</h3>
+            </div>
+            <div id="recentLogins" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список хостов -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title"><i class="fas fa-network-wired"></i> Список хостов</h3>
+            </div>
+            <div id="hostsList" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
+

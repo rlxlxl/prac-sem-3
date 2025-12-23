@@ -1,0 +1,20 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8080
+  },
+  "logging": {
+    "agent_id": "agent-macos-01"
+  },
+  "sources": [
+    "system_log",
+    "bash_history",
+    "unified_log"
+  ],
+  "send_interval": 30,
+  "batch_size": 100,
+  "state_file": "/tmp/security_agent_state.json",
+  "output_json_file": "/tmp/security_events.json",
+  "max_json_events": 1000
+}
+

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/test",
+      "program": "/Users/slavavikentev/Desktop/учеба/семестр 3/прога/practice/test/build/Debug/outDebug"
+    }
+  ]
+}

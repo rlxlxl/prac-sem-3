@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Реестр событий - SIEM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .event-card {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .event-card:hover {
+        background-color: #f8f9fa;
+    }
+    .severity-high {
+        border-left: 4px solid #dc3545;
+    }
+    .severity-medium {
+        border-left: 4px solid #ffc107;
+    }
+    .severity-low {
+        border-left: 4px solid #28a745;
+    }
+    .event-details {
+        display: none;
+        margin-top: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .event-details.show {
+        display: block;
+    }
+    .filter-panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .pagination-info {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="fas fa-list"></i> Реестр событий</h1>
+
+<!-- Панель фильтров -->
+<div class="filter-panel">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Поиск (регулярное выражение)</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="Поиск...">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Тип события</label>
+            <select class="form-select" id="eventTypeFilter">
+                <option value="">Все</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Критичность</label>
+            <select class="form-select" id="severityFilter">
+                <option value="">Все</option>
+                <option value="high">Высокая</option>
+                <option value="medium">Средняя</option>
+                <option value="low">Низкая</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Хост</label>
+            <input type="text" class="form-control" id="hostnameFilter" placeholder="hostname">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Пользователь</label>
+            <input type="text" class="form-control" id="userFilter" placeholder="user">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-primary w-100" onclick="loadEvents()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <button class="btn btn-success" onclick="exportEvents('json')">
+                <i class="fas fa-download"></i> Экспорт JSON
+            </button>
+            <button class="btn btn-success" onclick="exportEvents('csv')">
+                <i class="fas fa-download"></i> Экспорт CSV
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица событий -->
+<div class="card">
+    <div class="card-body">
+        <div id="eventsTable" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка событий...
+        </div>
+    </div>
+</div>
+
+<!-- Пагинация -->
+<div class="pagination-info">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            Показано <span id="showingFrom">0</span> - <span id="showingTo">0</span> из <span id="totalEvents">0</span>
+        </div>
+        <nav>
+            <ul class="pagination mb-0" id="pagination">
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+{% endblock %}
+
