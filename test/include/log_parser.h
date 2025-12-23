@@ -179,12 +179,13 @@ public:
         return event;
     }
     
-    SecurityEvent parseBashHistory(const std::string& logLine, const std::string& username) {
+    SecurityEvent parseBashHistory(const std::string& logLine, const std::string& username, const std::string& timestamp = "") {
         SecurityEvent event;
         event.hostname = hostname_;
         event.source = "bash_history";
         event.raw_log = logLine;
-        event.timestamp = getCurrentTimestamp();
+        // Используем переданный timestamp, если он есть, иначе текущее время
+        event.timestamp = timestamp.empty() ? getCurrentTimestamp() : timestamp;
         event.user = username;
         event.command = logLine;
         event.process = "bash";
@@ -260,6 +261,15 @@ public:
         
         if (lower.find("com.apple") != std::string::npos && 
             event.severity == "low") {
+            return true;
+        }
+        
+        // Фильтруем команды, которые агент сам использует (чтобы избежать бесконечного цикла)
+        if (lower.find("osascript") != std::string::npos ||
+            lower.find("fc -w") != std::string::npos ||
+            lower.find("fc -w") != std::string::npos ||
+            lower.find("history -a") != std::string::npos ||
+            (lower.find("ps aux") != std::string::npos && lower.find("grep") != std::string::npos)) {
             return true;
         }
         

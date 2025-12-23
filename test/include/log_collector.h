@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <map>
+#include <set>
 #include <vector>
 #include <mutex>
 #include <sys/event.h>
@@ -19,6 +20,10 @@
 #include <cstring>
 #include <chrono>
 #include <cerrno>
+#include <cstdlib>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 
 struct FileState {
     std::string path;
@@ -179,8 +184,8 @@ private:
         std::cout << "Saving " << events.size() << " events to " << config.output_json_file << std::endl;
         
         try {
-            // Читаем существующие события (используем set для дедупликации по команде и timestamp)
-            std::map<std::string, SecurityEvent> eventsMap; // key = command + timestamp
+            // Читаем существующие события
+            std::vector<SecurityEvent> existingEvents;
             std::ifstream inFile(config.output_json_file);
             if (inFile.is_open()) {
                 std::string line;
@@ -199,9 +204,7 @@ private:
                         event.process = json["process"].asString();
                         event.command = json["command"].asString();
                         event.raw_log = json["raw_log"].asString();
-                        // Используем команду + timestamp как ключ для дедупликации
-                        std::string key = event.command + "|" + event.timestamp;
-                        eventsMap[key] = event;
+                        existingEvents.push_back(event);
                     } catch (...) {
                         // Пропускаем некорректные строки
                         continue;
@@ -210,17 +213,26 @@ private:
                 inFile.close();
             }
             
-            // Добавляем новые события
-            for (const auto& event : events) {
-                std::string key = event.command + "|" + event.timestamp;
-                eventsMap[key] = event;
+            // Добавляем новые события, проверяя на дубликаты
+            // Используем простую проверку: команда + timestamp должны быть уникальными
+            std::set<std::string> existingKeys;
+            for (const auto& existing : existingEvents) {
+                std::string key = existing.command + "|" + existing.timestamp;
+                existingKeys.insert(key);
             }
             
-            // Преобразуем map в vector
-            std::vector<SecurityEvent> allEvents;
-            for (const auto& [key, event] : eventsMap) {
-                allEvents.push_back(event);
+            std::vector<SecurityEvent> eventsToAdd;
+            for (const auto& event : events) {
+                std::string key = event.command + "|" + event.timestamp;
+                if (existingKeys.find(key) == existingKeys.end()) {
+                    eventsToAdd.push_back(event);
+                    existingKeys.insert(key);
+                }
             }
+            
+            // Объединяем существующие и новые события
+            std::vector<SecurityEvent> allEvents = existingEvents;
+            allEvents.insert(allEvents.end(), eventsToAdd.begin(), eventsToAdd.end());
             
             // Ограничиваем количество событий (оставляем последние N)
             if (static_cast<int>(allEvents.size()) > config.max_json_events) {
@@ -249,6 +261,9 @@ private:
             std::cerr << "Error saving events to JSON: " << e.what() << std::endl;
         }
     }
+    
+    // Убрана функция forceWriteHistory - она создавала бесконечный цикл,
+    // так как команды osascript попадали в историю и читались снова
     
     std::string findHistoryFile() {
         std::string homeDir = getHomeDirectory();
@@ -369,12 +384,30 @@ private:
             }
             
             // Для zsh_history формат: ": timestamp:0;command" или ": timestamp:duration;command"
-            // Убираем префикс времени, если есть
+            // Извлекаем timestamp и команду
             std::string command = line;
+            std::string historyTimestamp = "";
+            
             if (!line.empty() && line[0] == ':') {
                 // Ищем второе двоеточие
                 size_t secondColon = line.find(':', 1);
                 if (secondColon != std::string::npos) {
+                    // Извлекаем timestamp (число между первым и вторым двоеточием)
+                    std::string timestampStr = line.substr(1, secondColon - 1);
+                    try {
+                        // Конвертируем Unix timestamp в ISO формат
+                        long long timestamp = std::stoll(timestampStr);
+                        std::time_t time_t = static_cast<std::time_t>(timestamp);
+                        std::tm* tm = std::gmtime(&time_t);
+                        if (tm) {
+                            std::ostringstream oss;
+                            oss << std::put_time(tm, "%Y-%m-%dT%H:%M:%SZ");
+                            historyTimestamp = oss.str();
+                        }
+                    } catch (...) {
+                        // Если не удалось распарсить timestamp, используем текущее время
+                    }
+                    
                     // Ищем точку с запятой после timestamp
                     size_t semicolon = line.find(';', secondColon);
                     if (semicolon != std::string::npos && semicolon + 1 < line.length()) {
@@ -386,13 +419,18 @@ private:
                 }
             }
             
-            // Убираем ведущие пробелы
+            // Убираем ведущие пробелы и trailing backslashes (zsh формат)
             if (!command.empty()) {
                 size_t firstNonSpace = command.find_first_not_of(" \t");
                 if (firstNonSpace != std::string::npos) {
                     command = command.substr(firstNonSpace);
                 } else {
                     command.clear();
+                }
+                
+                // Убираем trailing backslash (zsh формат для многострочных команд)
+                while (!command.empty() && command.back() == '\\') {
+                    command.pop_back();
                 }
             }
             
@@ -402,7 +440,7 @@ private:
                 continue;
             }
             
-            SecurityEvent event = parser_.parseBashHistory(command, username);
+            SecurityEvent event = parser_.parseBashHistory(command, username, historyTimestamp);
             parsedEvents++;
             
             if (!parser_.shouldFilterEvent(event)) {
@@ -462,7 +500,13 @@ private:
                 }
                 
                 // Пауза перед следующей проверкой
-                std::this_thread::sleep_for(std::chrono::seconds(5));
+                // Для bash_history используем более частую проверку (2 секунды),
+                // чтобы быстрее замечать новые команды
+                if (source == "bash_history") {
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                } else {
+                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                }
             } catch (const std::exception& e) {
                 std::cerr << "Error in collector for " << source << ": " << e.what() << std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(10));
