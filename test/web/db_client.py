@@ -1,6 +1,4 @@
-"""
-Клиент для подключения к NoSQL СУБД через TCP
-"""
+
 import socket
 import struct
 import json
@@ -113,6 +111,28 @@ class DatabaseClient:
         
         response = self._execute_request(request)
         return response.get("status") == "success"
+    
+    def delete_events(self, query: Optional[Dict] = None,
+                     database: str = "security_db",
+                     collection: str = "security_events") -> int:
+        """Удаление событий из БД"""
+        if query is None:
+            query = {}
+        
+        request = {
+            "database": database,
+            "operation": "delete",
+            "collection": collection,
+            "query": query
+        }
+        
+        response = self._execute_request(request)
+        
+        if response.get("status") == "success":
+            # Возвращаем количество удаленных документов
+            return response.get("deleted", 0)
+        else:
+            raise Exception(f"Database error: {response.get('message', 'Unknown error')}")
     
     def __enter__(self):
         self.connect()

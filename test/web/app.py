@@ -1,6 +1,4 @@
-"""
-SIEM Web Application - Flask веб-сервер с REST API
-"""
+
 import os
 import json
 import re
@@ -127,7 +125,8 @@ def load_events_from_json_file(file_path: str = None) -> List[Dict]:
         return events
     
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        # Пробуем читать с обработкой ошибок кодировки
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -184,36 +183,31 @@ def sync_events_from_json_to_db():
 
 
 def get_events_from_source(force_json: bool = False) -> List[Dict]:
-    """Получение событий из БД или JSON файла (fallback)
+    """Получение событий из JSON файла или БД (fallback)
     
     Args:
-        force_json: Если True, всегда читать из JSON файла (для реального времени)
+        force_json: Если True, всегда читать только из JSON файла (для реального времени)
     """
     # Если принудительно читать из JSON (для реального времени)
     if force_json:
-        events = load_events_from_json_file()
-        # Если в JSON файле нет событий, пробуем БД
-        if not events:
-            try:
-                with get_db_client() as db:
-                    events = db.find_events({})
-            except:
-                pass
+        # Всегда читаем только из JSON файла, без fallback на БД
+        return load_events_from_json_file()
+    
+    # Сначала пробуем JSON файл (приоритет)
+    events = load_events_from_json_file()
+    if events:
         return events
     
-    # Сначала пробуем БД
+    # Если JSON файл пуст или недоступен, пробуем БД
     try:
         with get_db_client() as db:
             events = db.find_events({})
-            # Если в БД есть события, возвращаем их
             if events:
                 return events
     except Exception as e:
         pass
     
-    # Если БД пуста или недоступна, читаем из JSON файла
-    events = load_events_from_json_file()
-    return events
+    return []
 
 
 @app.route('/')
@@ -281,11 +275,9 @@ def api_get_events():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'false').lower() == 'true'
         
-        # Получаем события из БД или JSON файла
-        # Если realtime=true, всегда читаем из JSON файла для актуальных данных
+
         all_events = get_events_from_source(force_json=realtime)
         
-        # Применяем фильтры
         if event_type:
             all_events = [e for e in all_events if e.get('event_type') == event_type]
         if severity:
@@ -295,31 +287,25 @@ def api_get_events():
         if user:
             all_events = [e for e in all_events if e.get('user') == user]
         
-        # Фильтрация по времени (если hours > 0)
         if hours > 0:
             all_events = filter_events_by_time(all_events, hours)
-        # Если hours = 0, показываем все события без фильтрации по времени
         
-        # Поиск по регулярному выражению
         if search:
             try:
                 pattern = re.compile(search, re.IGNORECASE)
                 filtered_events = []
                 for event in all_events:
-                    # Ищем в основных полях
                     event_str = json.dumps(event).lower()
                     if pattern.search(event_str):
                         filtered_events.append(event)
                 all_events = filtered_events
             except re.error:
-                # Некорректное регулярное выражение - используем простой поиск
                 search_lower = search.lower()
                 all_events = [
                     e for e in all_events 
                     if search_lower in json.dumps(e).lower()
                 ]
         
-        # Сортировка по timestamp (новые первыми)
         all_events.sort(key=lambda x: parse_timestamp(x.get('timestamp', '')), reverse=True)
         
         # Пагинация
@@ -377,13 +363,11 @@ def api_active_agents():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по hostname
         agents = {}
         for event in recent_events:
             hostname = event.get('hostname', 'unknown')
@@ -394,7 +378,6 @@ def api_active_agents():
                     'event_count': 0
                 }
             agents[hostname]['event_count'] += 1
-            # Обновляем последнюю активность
             event_ts = parse_timestamp(event.get('timestamp', ''))
             agent_ts = parse_timestamp(agents[hostname]['last_activity'])
             if event_ts > agent_ts:
@@ -412,14 +395,12 @@ def api_recent_logins():
     try:
         limit = int(request.args.get('limit', 10))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
-        # Находим все события аутентификации (фильтруем на стороне Python)
         all_events = get_events_from_source(force_json=realtime)
         login_events = [
             e for e in all_events 
             if e.get('event_type') in ['user_login', 'auth_failure', 'authentication']
         ]
         
-        # Сортируем и берем последние
         login_events.sort(key=lambda x: parse_timestamp(x.get('timestamp', '')), reverse=True)
         
         result = []
@@ -446,13 +427,11 @@ def api_hosts():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по hostname
         hosts = {}
         for event in recent_events:
             hostname = event.get('hostname', 'unknown')
@@ -476,13 +455,11 @@ def api_events_by_type():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по типу
         type_counts = {}
         for event in recent_events:
             event_type = event.get('event_type', 'unknown')
@@ -504,13 +481,11 @@ def api_events_by_severity():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по severity
         severity_counts = {}
         for event in recent_events:
             severity = event.get('severity', 'low')
@@ -532,13 +507,11 @@ def api_top_users():
         limit = int(request.args.get('limit', 10))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по пользователю
         user_counts = {}
         for event in recent_events:
             user = event.get('user', 'unknown')
@@ -562,13 +535,11 @@ def api_top_processes():
         limit = int(request.args.get('limit', 10))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по процессу
         process_counts = {}
         for event in recent_events:
             process = event.get('process', 'unknown')
@@ -591,20 +562,17 @@ def api_events_timeline():
         hours = int(request.args.get('hours', 24))
         realtime = request.args.get('realtime', 'true').lower() == 'true'
         all_events = get_events_from_source(force_json=realtime)
-        # Если hours = 0, показываем все события
         if hours > 0:
             recent_events = filter_events_by_time(all_events, hours)
         else:
             recent_events = all_events
         
-        # Группируем по часам
         hour_counts = {}
         for event in recent_events:
             ts = parse_timestamp(event.get('timestamp', ''))
             hour_key = ts.strftime('%Y-%m-%d %H:00')
             hour_counts[hour_key] = hour_counts.get(hour_key, 0) + 1
         
-        # Сортируем по времени
         result = [{'hour': k, 'count': v} for k, v in hour_counts.items()]
         result.sort(key=lambda x: x['hour'])
         
@@ -651,13 +619,11 @@ def api_export_events():
 
 
 if __name__ == '__main__':
-    # Проверяем подключение к БД
     web_port = int(os.environ.get('WEB_PORT', '5001'))
     print(f"Connecting to database at {DB_HOST}:{DB_PORT}")
     print(f"Using credentials: username={AUTH_USERNAME}")
     print(f"JSON events file: {JSON_EVENTS_FILE}")
     
-    # Пытаемся синхронизировать события из JSON файла в БД при старте
     try:
         print("Syncing events from JSON file to database...")
         added = sync_events_from_json_to_db()
