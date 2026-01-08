@@ -6,7 +6,7 @@ let charts = {};
 document.addEventListener('DOMContentLoaded', function() {
     refreshAll();
     // Автообновление каждые 5 секунд для реального времени
-    setInterval(refreshAll, 5000);
+   // setInterval(refreshAll, 5000);
 });
 
 function refreshAll() {
@@ -340,7 +340,7 @@ function loadEventsTimeline() {
 
 function loadStatistics() {
     // Загружаем общую статистику (увеличиваем период до недели для теста)
-    apiCall('/api/events?per_page=1&hours=168')
+    apiCall('/api/events?per_page=1&hours=24')
         .then(data => {
             if (data && !data.error) {
                 document.getElementById('totalEvents').textContent = data.total || 0;
