@@ -51,6 +51,25 @@ def load_events_from_json_file(file_path: str = None) -> List[Dict]:
     
     try:
         with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            content = f.read().strip()
+            if not content:
+                return events
+            
+            # Попытка 1: Парсинг как обычный JSON объект (словарь)
+            try:
+                data = json.loads(content)
+                if isinstance(data, dict):
+                    # Если это словарь, извлекаем все значения (события)
+                    events = list(data.values())
+                    return events
+                elif isinstance(data, list):
+                    # Если это список, возвращаем как есть
+                    return data
+            except json.JSONDecodeError:
+                pass
+            
+            # Попытка 2: Парсинг как JSON Lines (каждая строка - отдельный JSON)
+            f.seek(0)  # Возвращаемся в начало файла
             for line in f:
                 line = line.strip()
                 if not line:

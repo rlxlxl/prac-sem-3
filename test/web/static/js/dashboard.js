@@ -65,7 +65,7 @@ async function apiCall(url) {
 
 function loadActiveAgents() {
     const container = document.getElementById('activeAgents');
-    apiCall('/api/dashboard/active-agents?hours=24')
+    apiCall('/api/dashboard/active-agents?hours=168')
         .then(data => {
             if (!data) {
                 container.innerHTML = '<div class="text-danger">Ошибка загрузки данных</div>';
@@ -133,7 +133,7 @@ function loadRecentLogins() {
 
 function loadHosts() {
     const container = document.getElementById('hostsList');
-    apiCall('/api/dashboard/hosts?hours=24')
+    apiCall('/api/dashboard/hosts?hours=168')
         .then(data => {
             if (!data) {
                 container.innerHTML = '<div class="text-danger">Ошибка загрузки данных</div>';
@@ -167,7 +167,7 @@ function loadHosts() {
 }
 
 function loadEventsByType() {
-    apiCall('/api/dashboard/events-by-type?hours=24')
+    apiCall('/api/dashboard/events-by-type?hours=168')
         .then(data => {
             if (!data || data.error) return;
             
@@ -203,7 +203,7 @@ function loadEventsByType() {
 }
 
 function loadEventsBySeverity() {
-    apiCall('/api/dashboard/events-by-severity?hours=24')
+    apiCall('/api/dashboard/events-by-severity?hours=168')
         .then(data => {
             if (!data || data.error) return;
             
@@ -244,7 +244,7 @@ function loadEventsBySeverity() {
 
 function loadTopUsers() {
     const container = document.getElementById('topUsers');
-    apiCall('/api/dashboard/top-users?hours=24&limit=10')
+    apiCall('/api/dashboard/top-users?hours=168&limit=10')
         .then(data => {
             if (!data) {
                 container.innerHTML = '<div class="text-danger">Ошибка загрузки данных</div>';
@@ -275,7 +275,7 @@ function loadTopUsers() {
 
 function loadTopProcesses() {
     const container = document.getElementById('topProcesses');
-    apiCall('/api/dashboard/top-processes?hours=24&limit=10')
+    apiCall('/api/dashboard/top-processes?hours=168&limit=10')
         .then(data => {
             if (!data) {
                 container.innerHTML = '<div class="text-danger">Ошибка загрузки данных</div>';
@@ -305,7 +305,7 @@ function loadTopProcesses() {
 }
 
 function loadEventsTimeline() {
-    apiCall('/api/dashboard/events-timeline?hours=24')
+    apiCall('/api/dashboard/events-timeline?hours=168')
         .then(data => {
             if (!data || data.error) return;
             
@@ -340,7 +340,7 @@ function loadEventsTimeline() {
 
 function loadStatistics() {
     // Загружаем общую статистику (увеличиваем период до недели для теста)
-    apiCall('/api/events?per_page=1&hours=24')
+    apiCall('/api/events?per_page=1&hours=168')
         .then(data => {
             if (data && !data.error) {
                 document.getElementById('totalEvents').textContent = data.total || 0;

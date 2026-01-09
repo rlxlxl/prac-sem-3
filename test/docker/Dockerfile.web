@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY web/requirements.txt /app/requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY web/ /app/
+
+RUN mkdir -p /app/data
+
+ENV DB_HOST=db
+ENV DB_PORT=8080
+ENV WEB_PORT=5001
+ENV DB_NAME=security_db
+ENV COLLECTION_NAME=security_events
+ENV JSON_EVENTS_FILE=/app/data/security_events.json
+ENV SIEM_USERNAME=admin
+ENV SIEM_PASSWORD=admin123
+ENV SECRET_KEY=siem-secret-key-change-in-production
+
+EXPOSE 5001
+
+CMD ["python", "app.py"]
+

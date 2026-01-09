@@ -6,23 +6,25 @@
 #include <thread>
 #include <chrono>
 
+using namespace std;
+
 void printUsage(const char* programName) {
-    std::cout << "Usage: " << programName << " [OPTIONS]\n";
-    std::cout << "Options:\n";
-    std::cout << "  -c, --config <file>    Configuration file path (default: config/agent_config.json)\n";
-    std::cout << "  -d, --daemon           Run as daemon\n";
-    std::cout << "  -h, --help             Show this help message\n";
-    std::cout << "  -s, --stop             Stop running daemon\n";
-    std::cout << "  -r, --restart          Restart daemon\n";
-    std::cout << "\n";
-    std::cout << "Examples:\n";
-    std::cout << "  " << programName << " --config config/agent_config.json\n";
-    std::cout << "  " << programName << " --daemon\n";
-    std::cout << "  " << programName << " --stop\n";
+    cout << "Usage: " << programName << " [OPTIONS]\n";
+    cout << "Options:\n";
+    cout << "  -c, --config <file>    Configuration file path (default: config/agent_config.json)\n";
+    cout << "  -d, --daemon           Run as daemon\n";
+    cout << "  -h, --help             Show this help message\n";
+    cout << "  -s, --stop             Stop running daemon\n";
+    cout << "  -r, --restart          Restart daemon\n";
+    cout << "\n";
+    cout << "Examples:\n";
+    cout << "  " << programName << " --config config/agent_config.json\n";
+    cout << "  " << programName << " --daemon\n";
+    cout << "  " << programName << " --stop\n";
 }
 
-pid_t readPidFromFile(const std::string& pid_file) {
-    std::ifstream file(pid_file);
+pid_t readPidFromFile(const string& pid_file) {
+    ifstream file(pid_file);
     if (!file.is_open()) {
         return -1;
     }
@@ -34,37 +36,37 @@ pid_t readPidFromFile(const std::string& pid_file) {
     return pid;
 }
 
-bool stopDaemon(const std::string& pid_file) {
+bool stopDaemon(const string& pid_file) {
     pid_t pid = readPidFromFile(pid_file);
     if (pid < 0) {
-        std::cerr << "Cannot find PID file or daemon is not running" << std::endl;
+        cerr << "Cannot find PID file or daemon is not running" << endl;
         return false;
     }
     
     if (kill(pid, SIGTERM) == 0) {
-        std::cout << "Sent SIGTERM to process " << pid << std::endl;
+        cout << "Sent SIGTERM to process " << pid << endl;
         
         // Ждем завершения процесса
         for (int i = 0; i < 10; ++i) {
             if (kill(pid, 0) != 0) {
-                std::cout << "Daemon stopped" << std::endl;
+                cout << "Daemon stopped" << endl;
                 return true;
             }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            this_thread::sleep_for(chrono::seconds(1));
         }
         
         // Если процесс не завершился, отправляем SIGKILL
         kill(pid, SIGKILL);
-        std::cout << "Daemon force stopped" << std::endl;
+        cout << "Daemon force stopped" << endl;
         return true;
     } else {
-        std::cerr << "Failed to send signal to process " << pid << std::endl;
+        cerr << "Failed to send signal to process " << pid << endl;
         return false;
     }
 }
 
 int main(int argc, char* argv[]) {
-    std::string config_path = "config/agent_config.json";
+    string config_path = "config/agent_config.json";
     bool daemon_mode = false;
     bool stop_mode = false;
     bool restart_mode = false;
@@ -109,7 +111,7 @@ int main(int argc, char* argv[]) {
     
     if (restart_mode) {
         if (stopDaemon("/tmp/security_agent.pid")) {
-            std::this_thread::sleep_for(std::chrono::seconds(2));
+            this_thread::sleep_for(chrono::seconds(2));
         }
         daemon_mode = true;
     }
@@ -118,13 +120,13 @@ int main(int argc, char* argv[]) {
         SecurityAgent agent(config_path);
         
         if (!agent.start(daemon_mode)) {
-            std::cerr << "Failed to start security agent" << std::endl;
+            cerr << "Failed to start security agent" << endl;
             return 1;
         }
         
         return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
         return 1;
     }
 }

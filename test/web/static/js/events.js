@@ -66,7 +66,7 @@ function loadEvents(page = 1) {
     const params = new URLSearchParams({
         page: page,
         per_page: 50,
-        hours: 24
+        hours: 168
     });
     
     const search = document.getElementById('searchInput').value.trim();
@@ -273,7 +273,7 @@ function formatTimestamp(timestamp) {
 function exportEvents(format) {
     const params = new URLSearchParams({
         format: format,
-        hours: 24
+        hours: 168
     });
     
     // Добавляем фильтры

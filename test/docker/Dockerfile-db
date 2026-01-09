@@ -1,0 +1,36 @@
+FROM debian:bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY include/ /app/include/
+COPY src/server.cpp /app/src/
+COPY Makefile /app/
+
+RUN mkdir -p build && \
+    g++ -std=c++17 -Wall -Wextra -O2 -Iinclude -pthread -o /app/build/db_server src/server.cpp
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    libgcc-s1 \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /app/build/db_server /app/db_server
+
+RUN mkdir -p /app/data && \
+    chmod +x /app/db_server
+
+EXPOSE 8080
+
+WORKDIR /app/data
+CMD ["/app/db_server", "8080"]
+

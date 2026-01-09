@@ -16,21 +16,22 @@
 #include <chrono>
 #include <cstdlib>
 
+using namespace std;
 class SecurityAgent {
 private:
     ConfigManager config_manager_;
     MessageBuffer message_buffer_;
     LogCollector log_collector_;
     Sender sender_;
-    std::atomic<bool> running_;
-    std::string pid_file_;
+    atomic<bool> running_;
+    string pid_file_;
     
     void daemonize() {
         // Создаем дочерний процесс
         pid_t pid = fork();
         
         if (pid < 0) {
-            throw std::runtime_error("Failed to fork");
+            throw runtime_error("Failed to fork");
         }
         
         if (pid > 0) {
@@ -40,13 +41,13 @@ private:
         
         // Создаем новую сессию
         if (setsid() < 0) {
-            throw std::runtime_error("Failed to create session");
+            throw runtime_error("Failed to create session");
         }
         
         // Второй fork для гарантии, что процесс не является лидером сессии
         pid = fork();
         if (pid < 0) {
-            throw std::runtime_error("Failed to fork second time");
+            throw runtime_error("Failed to fork second time");
         }
         
         if (pid > 0) {
@@ -80,28 +81,28 @@ private:
     }
     
     void savePid() {
-        std::ofstream file(pid_file_);
+        ofstream file(pid_file_);
         if (file.is_open()) {
-            file << getpid() << std::endl;
+            file << getpid() << endl;
             file.close();
         }
     }
     
     void removePid() {
-        std::remove(pid_file_.c_str());
+        remove(pid_file_.c_str());
     }
     
     static SecurityAgent* instance_;
     static void signalHandler(int signal) {
         if (instance_) {
-            std::cerr << "Received signal " << signal << ", shutting down..." << std::endl;
+            cerr << "Received signal " << signal << ", shutting down..." << endl;
             instance_->stop();
         }
     }
     
 public:
-    SecurityAgent(const std::string& config_path = "config/agent_config.json",
-                  const std::string& pid_file = "/tmp/security_agent.pid")
+    SecurityAgent(const string& config_path = "config/agent_config.json",
+                  const string& pid_file = "/tmp/security_agent.pid")
         : config_manager_(),
           message_buffer_(1000, "/tmp/security_agent_buffer.jsonl"),
           log_collector_(config_manager_, message_buffer_),
@@ -112,7 +113,7 @@ public:
         
         // Загружаем конфигурацию
         if (!config_manager_.loadFromFile(config_path)) {
-            std::cerr << "Warning: Using default configuration" << std::endl;
+            cerr << "Warning: Using default configuration" << endl;
         }
     }
     
@@ -130,8 +131,8 @@ public:
         if (daemon) {
             try {
                 daemonize();
-            } catch (const std::exception& e) {
-                std::cerr << "Failed to daemonize: " << e.what() << std::endl;
+            } catch (const exception& e) {
+                cerr << "Failed to daemonize: " << e.what() << endl;
                 return false;
             }
         } else {
@@ -149,14 +150,14 @@ public:
         log_collector_.start();
         sender_.start();
         
-        std::cout << "Security agent started" << std::endl;
-        std::cout << "Agent ID: " << config_manager_.getConfig().logging.agent_id << std::endl;
-        std::cout << "Server: " << config_manager_.getConfig().server.host 
-                  << ":" << config_manager_.getConfig().server.port << std::endl;
+        cout << "Security agent started" << endl;
+        cout << "Agent ID: " << config_manager_.getConfig().logging.agent_id << endl;
+        cout << "Server: " << config_manager_.getConfig().server.host 
+                  << ":" << config_manager_.getConfig().server.port << endl;
         
         // Основной цикл
         while (running_) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            this_thread::sleep_for(chrono::seconds(1));
         }
         
         return true;
@@ -172,7 +173,7 @@ public:
         log_collector_.stop();
         sender_.stop();
         
-        std::cout << "Security agent stopped" << std::endl;
+        cout << "Security agent stopped" << endl;
     }
     
     bool isRunning() const {

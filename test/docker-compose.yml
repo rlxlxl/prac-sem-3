@@ -1,0 +1,87 @@
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-db
+    container_name: siem_db
+    ports:
+      - "8080:8080"
+    volumes:
+      - db_data:/app/data
+    networks:
+      - siem_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: siem_backend
+    environment:
+      - DB_HOST=db
+      - DB_PORT=8080
+      - WEB_PORT=5001
+      - DB_NAME=security_db
+      - COLLECTION_NAME=security_events
+      - JSON_EVENTS_FILE=/app/security_db/security_events.json
+      - SIEM_USERNAME=${SIEM_USERNAME:-admin}
+      - SIEM_PASSWORD=${SIEM_PASSWORD:-admin123}
+      - SECRET_KEY=${SECRET_KEY:-siem-secret-key-change-in-production}
+    volumes:
+      - backend_data:/app/data
+      - ./security_db:/app/security_db:ro
+    networks:
+      - siem_network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 5001)); s.close()\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nginx
+    container_name: siem_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - siem_network
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  db_data:
+    driver: local
+  backend_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  siem_network:
+    driver: bridge
+
